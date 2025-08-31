@@ -17,4 +17,4 @@ FLUSH PRIVILEGES;
 EOF
 
 # 通常の MariaDB サーバとして起動
-exec mysqld_safe --user=mysql
+exec mysqld_safe --user=mysql --bind-address=0.0.0.0
