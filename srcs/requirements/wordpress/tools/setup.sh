@@ -34,4 +34,4 @@ if [ ! -f wp-config.php ]; then
   chmod -R 755 /var/www/html
 fi
 
-php-fpm
+exec php-fpm -F
