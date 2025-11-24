@@ -29,7 +29,7 @@ RUN mkdir -p /run/php && chown -R www-data:www-data /run/php
 RUN sed -i 's|listen = /run/php/php7.4-fpm.sock|listen = 9000|' \
     /etc/php/7.4/fpm/pool.d/www.conf
 
-# WP-CLI
+# WP-CLI インストール
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
     chmod +x wp-cli.phar && mv wp-cli.phar /usr/local/bin/wp
 

@@ -4,6 +4,12 @@ set -e
 cd /var/www/html
 
 # ------------------------------
+# PHP-FPM 用ディレクトリ作成（PID/ソケット用）
+# ------------------------------
+mkdir -p /run/php
+chown -R www-data:www-data /run/php
+
+# ------------------------------
 # MariaDB の起動待ち
 # ------------------------------
 echo "[+] Waiting for MariaDB..."
@@ -53,8 +59,10 @@ if [ ! -f wp-config.php ]; then
 fi
 
 # ------------------------------
-# PHP-FPM をフォアグラウンドで起動
+# PHP-FPM を TCP 待機で起動（Nginx から別コンテナでアクセス可能）
 # ------------------------------
-echo "[+] Starting PHP-FPM..."
-exec php-fpm -F
+# pool.d/www.conf の listen を TCP 9000 に変更
+sed -i 's|listen = /run/php/php7.4-fpm.sock|listen = 9000|' /etc/php/7.4/fpm/pool.d/www.conf
 
+echo "[+] Starting PHP-FPM on TCP port 9000..."
+exec php7.4-fpm -F
