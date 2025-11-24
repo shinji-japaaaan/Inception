@@ -1,0 +1,220 @@
+===== ./Makefile =====
+all:
+	docker-compose -f srcs/docker-compose.yml --env-file srcs/.env up --build -d
+
+down:
+	docker-compose -f srcs/docker-compose.yml down
+
+fclean:
+	docker-compose -f srcs/docker-compose.yml down -v --rmi all
+
+re: fclean all
+
+===== ./.gitignore =====
+.env
+
+===== ./srcs/docker-compose.yml =====
+version: '3.8'
+
+services:
+  mariadb:
+    build: ./requirements/mariadb
+    container_name: mariadb
+    restart: always
+    env_file: .env
+    volumes:
+      - ${MYSQL_DATA_PATH}:/var/lib/mysql
+    networks:
+      - inception
+
+  wordpress:
+    build: ./requirements/wordpress
+    container_name: wordpress
+    restart: always
+    env_file: .env
+    depends_on:
+      - mariadb
+    volumes:
+      - ${WP_DATA_PATH}:/var/www/html
+    networks:
+      - inception
+
+  nginx:
+    build: ./requirements/nginx
+    container_name: nginx
+    restart: always
+    env_file: .env
+    ports:
+      - "443:443"
+    depends_on:
+      - wordpress
+    volumes:
+      - ${WP_DATA_PATH}:/var/www/html
+    networks:
+      - inception
+
+networks:
+  inception:
+
+===== ./srcs/requirements/wordpress/Dockerfile =====
+FROM php:8.0-fpm
+
+# 必要パッケージをインストール
+RUN apt-get update && apt-get install -y \
+    mariadb-client \
+    wget \
+    unzip \
+    less \
+    default-mysql-client \
+    curl \
+    git \
+    unzip \
+    vim \
+    gnupg
+
+# PHP 拡張のインストール
+RUN docker-php-ext-install mysqli
+
+# WP-CLI インストール
+RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
+    chmod +x wp-cli.phar && \
+    mv wp-cli.phar /usr/local/bin/wp
+
+# 作業ディレクトリ
+WORKDIR /var/www/html
+
+COPY tools/setup.sh /setup.sh
+RUN chmod +x /setup.sh
+
+ENTRYPOINT ["bash", "/setup.sh"]
+
+===== ./srcs/requirements/wordpress/tools/setup.sh =====
+#!/bin/bash
+
+cd /var/www/html
+
+if [ ! -f wp-config.php ]; then
+  wget https://wordpress.org/latest.tar.gz
+  tar -xzf latest.tar.gz
+  mv wordpress/* .
+  rm -rf wordpress latest.tar.gz
+
+  wp config create \
+    --dbname=$MYSQL_DATABASE \
+    --dbuser=$MYSQL_USER \
+    --dbpass=$MYSQL_PASSWORD \
+    --dbhost=mariadb \
+    --path=/var/www/html \
+    --allow-root
+
+  wp core install \
+    --url=https://${DOMAIN_NAME} \
+    --title="Inception42" \
+    --admin_user=${WP_ADMIN_USER} \
+    --admin_password=${WP_ADMIN_PASS} \
+    --admin_email=${WP_ADMIN_EMAIL} \
+    --allow-root
+
+  wp user create \
+    ${WP_USER} ${WP_USER_EMAIL} \
+    --user_pass=${WP_USER_PASS} \
+    --role=author \
+    --allow-root
+
+  chown -R www-data:www-data /var/www/html
+  chmod -R 755 /var/www/html
+fi
+
+php-fpm
+
+===== ./srcs/requirements/nginx/Dockerfile =====
+FROM alpine:3.17
+
+RUN apk add nginx openssl
+
+COPY conf/default.conf /etc/nginx/http.d/default.conf
+COPY tools/setup.sh /setup.sh
+RUN chmod +x /setup.sh
+
+ENTRYPOINT ["sh", "/setup.sh"]
+
+===== ./srcs/requirements/nginx/tools/setup.sh =====
+#!/bin/sh
+
+mkdir -p /etc/ssl/certs /etc/ssl/private
+
+openssl req -x509 -nodes -days 365 \
+    -newkey rsa:2048 \
+    -keyout /etc/ssl/private/nginx.key \
+    -out /etc/ssl/certs/nginx.crt \
+    -subj "/C=JP/ST=Tokyo/L=Tokyo/O=42Tokyo/OU=Inception/CN=sishizaw.42.fr"
+
+mkdir -p /var/www/html
+
+exec nginx -g "daemon off;"
+
+===== ./srcs/requirements/nginx/conf/default.conf =====
+server {
+    listen 443 ssl;
+    server_name sishizaw.42.fr;
+
+    ssl_certificate /etc/ssl/certs/nginx.crt;
+    ssl_certificate_key /etc/ssl/private/nginx.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    root /var/www/html;
+    index index.php index.html;
+
+    location / {
+        try_files $uri $uri/ /index.php?$args;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_pass wordpress:9000;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME /var/www/html$fastcgi_script_name;
+    }
+}
+
+===== ./srcs/requirements/mariadb/Dockerfile =====
+FROM debian:bullseye
+
+# 必要パッケージのインストール（mariadb-server含む）
+RUN apt-get update && apt-get install -y \
+    mariadb-server \
+    procps \
+    bash \
+    && rm -rf /var/lib/apt/lists/*
+
+# 初期化スクリプトをコピーして実行可能にする
+COPY tools/setup.sh /setup.sh
+RUN chmod +x /setup.sh
+
+# MariaDB のデータディレクトリを作成（安全策）
+RUN mkdir -p /var/lib/mysql && chown -R mysql:mysql /var/lib/mysql
+
+# Entrypoint にスクリプトを指定
+ENTRYPOINT ["bash", "/setup.sh"]
+
+===== ./srcs/requirements/mariadb/tools/setup.sh =====
+#!/bin/bash
+
+# 初回起動用：データディレクトリの初期化（必要なら）
+if [ ! -d "/var/lib/mysql/mysql" ]; then
+  echo "Initializing database..."
+  mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql > /dev/null
+fi
+
+# MariaDB をブートストラップモードで起動し、ユーザー・DB作成
+mysqld --user=mysql --bootstrap << EOF
+FLUSH PRIVILEGES;
+CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE};
+CREATE USER '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
+GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%';
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
+FLUSH PRIVILEGES;
+EOF
+
+# 通常の MariaDB サーバとして起動
+exec mysqld_safe --user=mysql --bind-address=0.0.0.0

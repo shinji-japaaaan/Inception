@@ -1,30 +1,30 @@
-FROM php:8.0-fpm
+FROM debian:bullseye
 
-# 必要パッケージをインストール
+# パッケージインストール
 RUN apt-get update && apt-get install -y \
+    php7.4-fpm \
+    php7.4-mysql \
+    php7.4-cli \
+    php7.4-curl \
+    php7.4-zip \
+    php7.4-mbstring \
+    php7.4-xml \
+    php7.4-json \
+    php7.4-opcache \
     mariadb-client \
-    wget \
-    unzip \
-    less \
-    default-mysql-client \
-    curl \
-    git \
-    unzip \
-    vim \
-    gnupg
-
-# PHP 拡張のインストール
-RUN docker-php-ext-install mysqli
+    wget curl unzip git gnupg \
+ && rm -rf /var/lib/apt/lists/*
 
 # WP-CLI インストール
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
-    chmod +x wp-cli.phar && \
-    mv wp-cli.phar /usr/local/bin/wp
+    chmod +x wp-cli.phar && mv wp-cli.phar /usr/local/bin/wp
 
-# 作業ディレクトリ
 WORKDIR /var/www/html
 
-COPY tools/setup.sh /setup.sh
-RUN chmod +x /setup.sh
+# セットアップスクリプトコピー
+COPY tools/setup.sh /usr/local/bin/setup.sh
+RUN chmod +x /usr/local/bin/setup.sh
 
-ENTRYPOINT ["bash", "/setup.sh"]
+# php-fpm の起動は setup.sh 内で行うか、ここで行うか選択
+ENTRYPOINT ["bash", "/usr/local/bin/setup.sh"]
+
