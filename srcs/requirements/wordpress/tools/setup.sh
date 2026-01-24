@@ -56,5 +56,5 @@ fi
 # PHP-FPM をフォアグラウンドで起動
 # ------------------------------
 echo "[+] Starting PHP-FPM..."
-exec php-fpm -F
+exec php-fpm8.2 -F
 

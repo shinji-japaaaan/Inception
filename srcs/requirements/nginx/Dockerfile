@@ -1,11 +1,15 @@
-FROM alpine:3.17
+FROM debian:bookworm
 
-RUN apk add --no-cache nginx openssl
+# 必要パッケージのインストール
+RUN apt-get update && apt-get install -y \
+    nginx \
+    openssl \
+ && rm -rf /var/lib/apt/lists/*
 
-# 設定コピー
-COPY conf/default.conf /etc/nginx/http.d/default.conf
+# nginx 設定コピー
+COPY conf/default.conf /etc/nginx/conf.d/default.conf
 
-# SSL 証明書作成はビルド時に一度だけ
+# SSL 証明書作成（ビルド時に1回）
 RUN mkdir -p /etc/ssl/certs /etc/ssl/private && \
     openssl req -x509 -nodes -days 365 \
         -newkey rsa:2048 \
@@ -13,9 +17,8 @@ RUN mkdir -p /etc/ssl/certs /etc/ssl/private && \
         -out /etc/ssl/certs/nginx.crt \
         -subj "/C=JP/ST=Tokyo/L=Tokyo/O=42Tokyo/OU=Inception/CN=sishizaw.42.fr"
 
-# Webルート作成
+# Web ルート作成
 RUN mkdir -p /var/www/html
 
-# nginx を PID 1 として起動
+# nginx をフォアグラウンドで起動（PID1）
 CMD ["nginx", "-g", "daemon off;"]
-

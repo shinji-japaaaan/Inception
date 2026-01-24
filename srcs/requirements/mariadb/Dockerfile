@@ -1,4 +1,4 @@
-FROM debian:bullseye
+FROM debian:bookworm
 
 # 必要パッケージのインストール（mariadb-server含む）
 RUN apt-get update && apt-get install -y \
@@ -12,7 +12,7 @@ COPY tools/setup.sh /setup.sh
 RUN chmod +x /setup.sh
 
 # MariaDB のデータディレクトリを作成（安全策）
-RUN mkdir -p /var/lib/mysql && chown -R mysql:mysql /var/lib/mysql
+# RUN mkdir -p /var/lib/mysql && chown -R mysql:mysql /var/lib/mysql
 
 # Entrypoint にスクリプトを指定
-ENTRYPOINT ["bash", "/setup.sh"]
+ENTRYPOINT ["/setup.sh"]
