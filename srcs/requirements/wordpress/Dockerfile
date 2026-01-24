@@ -13,6 +13,12 @@ RUN apt-get update && apt-get install -y \
     wget curl unzip git \
  && rm -rf /var/lib/apt/lists/*
 
+# --- ここを追加：WP-CLI のインストール ---
+RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
+    && chmod +x wp-cli.phar \
+    && mv wp-cli.phar /usr/local/bin/wp
+# ------------------------------------
+
 RUN mkdir -p /run/php && chown -R www-data:www-data /run/php
 
 RUN sed -i 's|listen = .*|listen = 9000|' \
@@ -20,5 +26,7 @@ RUN sed -i 's|listen = .*|listen = 9000|' \
 
 COPY tools/setup.sh /usr/local/bin/setup.sh
 RUN chmod +x /usr/local/bin/setup.sh
+
+WORKDIR /var/www/html
 
 ENTRYPOINT ["/usr/local/bin/setup.sh"]
