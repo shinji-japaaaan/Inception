@@ -8,8 +8,8 @@ chown -R mysql:mysql /var/run/mysqld
 cd /var/lib/mysql
 chown -R mysql:mysql /var/lib/mysql
 
-# 初回起動のみ DB 初期化
-if [ ! -d "/var/lib/mysql/mysql" ]; then
+# --- 修正箇所：フラグファイルで判定する ---
+if [ ! -f ".setup_complete" ]; then
   echo "Initializing database..."
   mariadb-install-db \
     --user=mysql \
@@ -17,16 +17,18 @@ if [ ! -d "/var/lib/mysql/mysql" ]; then
     --datadir=/var/lib/mysql \
     > /dev/null
 
+  # 一時的なmysqldを起動して設定を流し込む
   mysqld --user=mysql --bootstrap << EOF
 FLUSH PRIVILEGES;
 CREATE DATABASE IF NOT EXISTS \`${MYSQL_DATABASE}\`;
-CREATE USER '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
+CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
 GRANT ALL PRIVILEGES ON \`${MYSQL_DATABASE}\`.* TO '${MYSQL_USER}'@'%';
-ALTER USER 'root'@'localhost'
-  IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
 FLUSH PRIVILEGES;
 EOF
 
+  # 完了フラグを作成
+  touch .setup_complete
   echo "Database initialized."
 fi
 

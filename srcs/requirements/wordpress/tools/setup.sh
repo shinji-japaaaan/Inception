@@ -17,10 +17,10 @@ echo "[+] MariaDB is ready!"
 # ------------------------------
 if [ ! -f wp-config.php ]; then
   echo "[+] Downloading WordPress..."
-  wget https://wordpress.org/latest.tar.gz
-  tar -xzf latest.tar.gz
+  wget https://wordpress.org/wordpress-6.4.2.tar.gz
+  tar -xzf wordpress-6.4.2.tar.gz
   mv wordpress/* .
-  rm -rf wordpress latest.tar.gz
+  rm -rf wordpress wordpress-6.4.2.tar.gz
 
   echo "[+] Creating wp-config.php..."
   wp config create \

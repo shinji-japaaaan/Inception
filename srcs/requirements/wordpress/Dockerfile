@@ -24,9 +24,9 @@ RUN mkdir -p /run/php && chown -R www-data:www-data /run/php
 RUN sed -i 's|listen = .*|listen = 9000|' \
     /etc/php/8.2/fpm/pool.d/www.conf
 
-COPY tools/setup.sh /usr/local/bin/setup.sh
-RUN chmod +x /usr/local/bin/setup.sh
+COPY tools/setup.sh /setup.sh
+RUN chmod +x /setup.sh
 
 WORKDIR /var/www/html
 
-ENTRYPOINT ["/usr/local/bin/setup.sh"]
+ENTRYPOINT ["/setup.sh"]
