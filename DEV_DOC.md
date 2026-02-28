@@ -13,4 +13,4 @@
 - Location: ホストマシンの /home/sishizaw/data/ 以下。 
  - mariadb/: データベースファイル
  - wordpress/: ウェブサイトのソースファイル
-- Mechanism: Dockerの **Named Volumes** を使用してデータを永続化しています。ホスト側のディレクトリは `docker-compose.yml` 内のボリューム定義を通じて、コンテナ内のパスにマウントされます。これにより、コンテナを削除（`make fclean` 等）しても、ホスト側のデータは維持される構成になっています。
+ - Mechanism: Dockerの Named Volumes を使用してデータを永続化しています。ホスト側のディレクトリは docker-compose.yml 内のボリューム定義を通じてマウントされます。これにより、通常のコンテナ停止や削除（make clean 等）ではデータは保持されますが、make fclean を実行した場合には、プロジェクトを完全に初期化するためホスト側のデータも削除される構成になっています。
