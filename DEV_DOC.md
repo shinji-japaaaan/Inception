@@ -13,4 +13,4 @@
 - Location: ホストマシンの /home/sishizaw/data/ 以下。 
  - mariadb/: データベースファイル
  - wordpress/: ウェブサイトのソースファイル
-- Mechanism: Dockerの local ドライバーを使用した bind マウントによって、コンテナ削除後もデータが保持されます。
+- Mechanism: Dockerの **Named Volumes** を使用してデータを永続化しています。ホスト側のディレクトリは `docker-compose.yml` 内のボリューム定義を通じて、コンテナ内のパスにマウントされます。これにより、コンテナを削除（`make fclean` 等）しても、ホスト側のデータは維持される構成になっています。
